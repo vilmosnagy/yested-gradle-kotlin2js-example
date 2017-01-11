@@ -1,0 +1,59 @@
+group 'com.github.vilmosnagy'
+version '1.0-SNAPSHOT'
+
+buildscript {
+    ext.kotlin_version = '1.0.6'
+
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+    }
+}
+
+apply plugin: 'kotlin2js'
+
+repositories {
+    mavenCentral()
+    maven {
+        url "http://nexus.yested.net/nexus/content/repositories/releases/"
+    }
+}
+
+compileKotlin2Js {
+    kotlinOptions.outputFile = "$projectDir/dist/js/example.js"
+    kotlinOptions.metaInfo = true
+}
+
+sourceSets {
+    main.kotlin.srcDirs += "src/main/kotlin"
+}
+
+dependencies {
+    compile "org.jetbrains.kotlin:kotlin-js-library:$kotlin_version"
+    compile "net.yested:Yested:0.0.108"
+}
+
+task copyJsFilesFromDependencies {
+    configurations.compile.each { File file ->
+        copy {
+            includeEmptyDirs = false
+
+            from zipTree(file.absolutePath)
+            into "$projectDir/dist/js/"
+            include { fileTreeElement ->
+                def path = fileTreeElement.path
+                path.endsWith(".js") && (path.startsWith("META-INF/resources/") || !path.startsWith("META-INF/"))
+            }
+        }
+    }
+}
+
+task copyRes(type: Copy) {
+    from "$projectDir/src/main/resources" into "$projectDir/dist/"
+}
+
+copyJsFilesFromDependencies.dependsOn copyRes
+copyJsFilesFromDependencies.dependsOn compileKotlin2Js
+build.dependsOn copyJsFilesFromDependencies
